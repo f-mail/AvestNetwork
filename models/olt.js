@@ -201,7 +201,7 @@ class Olt {
          //open snmp connection
         const snmpHelper = new SnmpHelper(this.ipAddress);
         try {
-            snmpHelper.open();
+            snmpHelper.open(5000, "private");
         } catch(e) {
             logger.error('open snmp connection', e);
             return false;
@@ -213,7 +213,7 @@ class Olt {
         try {
             resultSnmp = await snmpHelper.setSnmpIntegerValue(oid, 2);
         } catch(e) {
-            logger.error($`setting reboot snmp value for ${portId}:${onuId}`, e);
+            logger.error(`setting reboot snmp value for ${portId}:${onuId}`, e);
             return false;
         }
 

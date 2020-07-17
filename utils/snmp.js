@@ -6,8 +6,8 @@ class SnmpHelper {
         this.ip_address = ip_address;
     }
 
-    open(timeout = 5000) {
-        this.session = snmp.createSession (this.ip_address, "public", {
+    open(timeout = 5000, community = "public") {
+        this.session = snmp.createSession (this.ip_address, community, {
             port: 161,
             retries: 1,
             timeout: timeout,
