@@ -529,8 +529,10 @@ function checkChangesOnu(data) {
                             return (item.portId === onu.portId &&
                                 item.onuId === onu.onuId)
                         })
-                    if (oldOnu.status != onu.status)
-                        onusCnanged.push(onu);
+                    if (oldOnu) {
+                        if (oldOnu.status != onu.status)
+                            onusCnanged.push(onu);
+                    }
                 } catch {}
             }
         }
