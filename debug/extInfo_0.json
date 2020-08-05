@@ -76,7 +76,7 @@
 						{
 							"portId": 1,
 							"onuId": 21,
-							"status": 1,
+							"status": 2,
 							"name": "4 школа",
 							"mac": "e0:67:b3:94:06:5d",
 							"macShort": "94:06:5d",
@@ -86,7 +86,7 @@
 						{
 							"portId": 1,
 							"onuId": 22,
-							"status": 1,
+							"status": 2,
 							"name": "Октябрьская 59",
 							"mac": "e0:67:b3:1b:5f:3a",
 							"macShort": "1b:5f:3a",

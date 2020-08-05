@@ -44,3 +44,29 @@ function signOut() {
         ` path=/;`;        
     document.cookie = cookie; 
 }
+
+function sendNotification(title, options) {
+    if (!("Notification" in window)) {
+        return;
+    }
+
+    if (Notification.permission === "granted") {        
+        var notification = new Notification(title, options);        
+    }
+    
+    else if (Notification.permission !== "denied") {
+        Notification.requestPermission(function (permission) {            
+            if (permission === "granted") {
+                var notification = new Notification(title, options);
+            }
+        });
+    }   
+}
+
+function clickTestNotify(event) {
+    sendNotification('Avest Network', {
+        body: 'Вот такое вот уведомление',
+        icon: '/img/network-monitoring-medium.png',
+        dir: 'auto'
+    })
+}

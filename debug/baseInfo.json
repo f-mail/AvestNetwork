@@ -11,7 +11,7 @@
 						{
 							"portId": 1,
 							"onuId": 2,
-							"status": 2
+							"status": 1
 						},
 						{
 							"portId": 1,
@@ -26,7 +26,7 @@
 						{
 							"portId": 1,
 							"onuId": 16,
-							"status": 1
+							"status": 2
 						},
 						{
 							"portId": 1,
@@ -41,7 +41,7 @@
 						{
 							"portId": 1,
 							"onuId": 19,
-							"status": 3
+							"status": 1
 						},
 						{
 							"portId": 1,
@@ -1368,12 +1368,12 @@
 						{
 							"portId": 8,
 							"onuId": 26,
-							"status": 1
+							"status": 2
 						},
 						{
 							"portId": 8,
 							"onuId": 27,
-							"status": 1
+							"status": 2
 						},
 						{
 							"portId": 8,

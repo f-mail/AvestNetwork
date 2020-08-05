@@ -8,8 +8,11 @@ async function loadOnus(isStartPage = false) {
             return;
         }
         let baseInfo = await response.json();
+        if (!isStartPage)
+            checkChangesOnu(baseInfo);
         window.oltsStatus = baseInfo;        
         $('#root').html(createOnuDom(baseInfo));
+        selectingTableRow();
         prepareSearch();        
         
         //scroll to top
@@ -72,19 +75,22 @@ async function loadOnus(isStartPage = false) {
 
         resetRefreshButton();
 
-
     } catch(e) {
         $('#root').html(getHtmlError("400 Client error:", e.stack))
     }
 }
 
 function createOnuDom(data) {
+    //title page
+    document.title = `${data.onusOffline} ONUs off - Avest Network`
+
     //oltHead
     let oltHead = `<div class="d-flex align-items-center mb-3">
-         <div class="align-middle">
+         <div class="align-middle">         
             <span class="h4">&nbsp${data.onusAmount || 0} ONUs registered, ${
       data.onusOnline || 0
-    } online, ${data.onusOffline || 0} offline</span> `;         
+    } online, ${data.onusOffline || 0} offline</span>
+            <span class="h4 ml-2 text-secondary">[${getCurrentTime()}]</span> `;         
     if (data.onusAlarm) oltHead += `, ${data.onusAlarm} alarm `; 
     oltHead += `</div> `;   
     oltHead += ` <div class="ml-auto" id="loading-placeholder">
@@ -125,8 +131,13 @@ function createOnuDom(data) {
                     </div>
                 </div>`;
 
+    //search result (hiding)
+    oltHead += `<div class="collapse" id="search-header">
+                    <span class="h4 ml-2 mb-2">Search results:</span>
+                </div>`;
+
     //oltTabsHead
-    let tabsHead = `<div class="tab">
+    let tabsHead = `<div class="tab" id="tab-content">
         <ul class="nav nav-tabs" role="tablist"> `;    
     for(let i = 0; i < data.olts.length; i++) {
         let olt = data.olts[i];
@@ -141,9 +152,13 @@ function createOnuDom(data) {
         if(olt.onusBad > 0) isOfflineOnus = `[${olt.onusBad}]`;
 
 
-        let head = `<li class="nav-item">
+        let head = `<li class="nav-item" id="nav-item-${i}">
             <a class="nav-link pb-1 pt-2 ${isActive}" href="#tab-${i+1}"
-            data-toggle="tab" role="tab">${olt.model || '[UNKNOWN_OLT_MODEL]'} (${olt.ipAddress}) ${isOfflineOnus}</a>
+                data-toggle="tab" role="tab">${olt.model || '[UNKNOWN_OLT_MODEL]'} (${olt.ipAddress}) 
+                    <span class="ml-1 text-danger font-weight-bold">
+                        ${isOfflineOnus}
+                    </span>
+            </a>
             </li> `;
         tabsHead += head;
     }
@@ -154,7 +169,7 @@ function createOnuDom(data) {
     for(let i = 0; i < data.olts.length; i++) {
         let olt = data.olts[i];
         let tabPanel = `<div class="tab-pane ${i==0 ? 'active' : ''}" id="tab-${i+1}" role="tabpanel">
-            <div class="card">
+            <div class="card" id="card-olt-${i}">
                 <div class="card-header pb-1">
                     <span class="p-1 bg-light text-primary">
                         <i class="align-middle mr-1 p-2 fas fa-fw fa-bolt"></i>
@@ -164,18 +179,22 @@ function createOnuDom(data) {
                         <i class="align-middle mr-1 fas fa-fw fa-play-circle"></i>
                         runtime: ${olt.runTime || '[unknown]'}
                     </span>
+                    <span class="p-1 ml-2 bg-light text-primary">
+                        <i class="align-middle mr-1 fas fa-fw fa-external-link-alt"></i>
+                        <a class="d-inline" href='http://${olt.ipAddress}' target="_blank">web</a>
+                    </span>
 
                 </div>
-                <table class="table table-condensed align-center" id="olt-table-${i}">
+                <table class="table table-condensed align-center mb-1" id="olt-table-${i}">
                     <thead>
                         <tr class="tr-headers">
                                 <th style="width:10%;">ID</th>
                                 <th style="width:30%">Status</th>
                                 <th style="width:10%">Signal</th>
-                                <th style="width:20%">Ports</th>
+                                <th class="d-none d-md-table-cell" style="width:20%">Ports</th>
                                 <th class="d-none d-md-table-cell" style="width:15%">IP</th>
-                                <th>Reboot</th>
-                                <th>Edit</th>
+                                <th style="width:10%">Reboot</th>
+                                <th class="d-none d-md-table-cell">Edit</th>
                         </tr>
                     </thead>
                     <tbody> `;
@@ -185,23 +204,25 @@ function createOnuDom(data) {
                     let onu = olt.ports[p].onus[j];  
                     
                     //status
-                    let htmlStatus = "";
-                    if (onu.status === 2) htmlStatus += `class="bg-danger text-white"`;
-                    if (onu.status === 3) htmlStatus += `class="bg-warning"`;
+                    let htmlStatus = `class="clickable-row`;
+                    if (onu.status === 2) htmlStatus += ` bg-danger text-white`;
+                    if (onu.status === 3) htmlStatus += ` bg-warning`;
+                    htmlStatus += `"`
 
                     let rowOnu = `<tr ${htmlStatus}>
-                        <td class="d-none d-md-table-cell">${onu.portId}:${onu.onuId}</td>
-                        <td class="align-left" id="cell-name-${i}-${onu.portId}-${onu.onuId}">${getHtmlOnuName(onu)}</td>
-                        <td class="d-none d-md-table-cell" id="cell-signal-${i}-${onu.portId}-${onu.onuId}">${getHtmlOnuSignal(onu)}</td>
+                        <td class="d-md-table-cell">${onu.portId}:${onu.onuId}</td>
+                        <td class="d-md-table-cell align-left" id="cell-name-${i}-${onu.portId}-${onu.onuId}">${getHtmlOnuName(onu)}</td>
+                        <td class="d-md-table-cell" id="cell-signal-${i}-${onu.portId}-${onu.onuId}">${getHtmlOnuSignal(onu)}</td>
                         <td class="d-none d-md-table-cell" id="cell-ports-${i}-${onu.portId}-${onu.onuId}"></td>
                         <td class="d-none d-md-table-cell align-center">${getHtmlOnuIp(onu)}</td>
-                        <td class="d-none d-md-table-cell">${getHtmlOnuReboot(i, onu)}</td>
+                        <td class="d-md-table-cell">${getHtmlOnuReboot(i, onu)}</td>
                         <td class="d-none d-md-table-cell">${getHtmlOnuEdit(i, onu)}</td>                        
                     </tr> `
                     tabPanel += rowOnu;
                 }
             }
-            tabPanel += `</table></div></div> `        
+            tabPanel += `</table></div></div> `                    
+        
         tabContent += tabPanel;
     }
     tabContent += "</div> ";
@@ -212,6 +233,8 @@ function createOnuDom(data) {
         role="button"><i class="fas fa-chevron-up"></i></a>
      
      `;
+
+     
 
     return oltHead + tabsHead + tabContent + endTabs;    
 }
@@ -397,15 +420,60 @@ function prepareSearch() {
         var value = $(this).val().toLowerCase();
 
         for(let i = 0; i < window.oltsStatus.olts.length; i++)
-        $(`#olt-table-${i} tr:not(.tr-headers)`).filter(function() {
-          $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1)
-        });        
+            $(`#olt-table-${i} tr:not(.tr-headers)`).filter(function() {
+            $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1)
+            }); 
+        
+        if (value.length > 0)
+            showSearchContent();
+        else
+            hideSearchContent();
       });    
+}
+
+function showSearchContent() { 
+    if (window.isModeSearch === true) return;
+
+    for(let i = 1; i < window.oltsStatus.olts.length; i++) {
+        $(`#card-olt-0`).append($(`#olt-table-${i}`));
+        $(`#card-olt-${i}`).hide();
+        $(`#card-olt-${i}`).removeClass('active');
+        $(`#nav-item-${i}`).hide();   
+    }    
+
+    $(`#card-olt-0`).addClass('active');
+    $('.nav-tabs a[href="#tab-1"]').tab('show');
+
+    $(`#nav-item-0`).hide();
+    $('.card-header').hide();
+    $('#search-header').show();
+
+    window.titleBackup = document.title;
+    document.title = "Search - Avest Network";
+
+    window.isModeSearch = true; 
+}
+
+function hideSearchContent() {   
+
+    for(let i = 1; i < window.oltsStatus.olts.length; i++) {
+        $(`#card-olt-${i}`).append($(`#olt-table-${i}`))
+        $(`#card-olt-${i}`).show();
+        $(`#nav-item-${i}`).show();
+    }
+
+    $(`#nav-item-0`).show();
+    $('.card-header').show();
+    $('#search-header').hide();
+
+    document.title = window.titleBackup;
+
+    window.isModeSearch = false;
 }
 
 function resetRefreshButton() {
     $('#loading-placeholder').html(`<button class="btn btn-primary align-middle"
-            onclick="this.disabled=true; loadOnus(true);">Refresh</button>`)
+            onclick="this.disabled=true; loadOnus(false);">Refresh</button>`)
 }
 
 function convertOnuMacShort(mac) {
@@ -416,7 +484,81 @@ function convertOnuMacShort(mac) {
     return res.toUpperCase();
 }
 
-  
+function selectingTableRow() {    
+    $(`.clickable-row`).on('click', function(event) {       
+        if(event.target.type == 'submit') return;
+        if(event.target.tagName == 'svg') return;
+        if(event.target.tagName == 'path') return;        
+        if($(this).hasClass('bg-primary')){
+            $(this).removeClass('bg-primary');             
+        } else {
+            $(this).addClass('bg-primary').siblings().removeClass('bg-primary');            
+        }
+    });
+}
+
+function getCurrentTime() {
+    var today = new Date();
+    return today.getHours() + ":" +
+        (today.getMinutes() < 10 ? '0' + today.getMinutes() : today.getMinutes());
+}
+
+function notifyOnuChanged(body) {
+    sendNotification('ONUs status', {
+        body: body,
+        icon: '/img/network-monitoring-medium.png',
+        dir: 'auto'
+    })
+}
+
+function checkChangesOnu(data) {
+    let oldData = window.oltsStatus;
+    if (!oldData) return;
+
+    let onusCnanged = []
+    for(i = 0; i < data.olts.length; i++) {
+        let olt = data.olts[i];
+        for(j = 0; j < olt.ports.length; j++) {
+            let port = olt.ports[j];
+            for(k = 0; k < port.onus.length; k++) {
+                let onu = port.onus[k];
+                let oldOnu = undefined;
+                try {
+                    oldOnu = oldData.olts[i].ports[j].onus
+                        .find((item, index, array) => {
+                            return (item.portId === onu.portId &&
+                                item.onuId === onu.onuId)
+                        })
+                    if (oldOnu.status != onu.status)
+                        onusCnanged.push(onu);
+                } catch {}
+            }
+        }
+    }
+
+    if (onusCnanged.length === 0) return;
+
+    let txt = "";
+    for (onu of onusCnanged) {
+        if (onu.status === 1) txt += '(+) ';
+        else if (onu.status === 2) txt += '(-) ';
+        else if (onu.status === 3) txt += '(!) ';
+        if (convertOnuMacShort(onu.mac).trim().length > 0 || (onu.name || '').trim().length > 0)
+            txt += `${convertOnuMacShort(onu.mac) || ''} ${onu.name || ''}` + '\n';
+        else
+            txt += `{portID:${onu.portId} onuID:${onu.onuId}}` + '\n';
+    }
+
+    notifyOnuChanged(txt);
+}
 
 
 $(document).ready(loadOnus.bind(this, true));
+
+setInterval(() => {
+        if (window.isModeSearch == true)
+            return;
+        loadOnus(false);
+    },
+    1000 * 60 * 5);
+
